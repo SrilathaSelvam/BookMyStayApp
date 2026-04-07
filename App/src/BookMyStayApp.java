@@ -1,121 +1,111 @@
 import java.util.*;
 
 /**
- * Use Case 7: Add-On Services
- * Version 7.0
+ * Use Case 9: Validation & Error Handling
+ * Version 9.0
  *
- * Demonstrates adding optional services to a reservation
- * without modifying core booking logic.
+ * Demonstrates input validation, custom exceptions,
+ * and fail-fast error handling.
  */
 public class BookMyStayApp{
 
     public static void main(String[] args) {
 
-        System.out.println("===== Book My Stay - v7.0 =====");
+        System.out.println("===== Book My Stay - v9.0 =====");
 
-        // Create Add-On Service Manager
-        AddOnServiceManager manager = new AddOnServiceManager();
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoom("Single Room", 2);
+        inventory.addRoom("Double Room", 1);
 
-        // Sample Reservation IDs
-        String res1 = "R001";
-        String res2 = "R002";
+        BookingService service = new BookingService(inventory);
 
-        // Create Services
-        Service breakfast = new Service("Breakfast", 500);
-        Service wifi = new Service("WiFi", 200);
-        Service spa = new Service("Spa", 1500);
+        try {
+            // Valid booking
+            service.bookRoom("R001", "Alice", "Single Room");
 
-        // Add services to reservations
-        manager.addService(res1, breakfast);
-        manager.addService(res1, wifi);
+            // Invalid room type
+            service.bookRoom("R002", "Bob", "Suite Room");
 
-        manager.addService(res2, spa);
+        } catch (InvalidBookingException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
 
-        // Display services for each reservation
-        System.out.println("\nServices for Reservation " + res1 + ":");
-        manager.displayServices(res1);
+        try {
+            // Overbooking attempt
+            service.bookRoom("R003", "Charlie", "Double Room");
+            service.bookRoom("R004", "David", "Double Room"); // exceeds
 
-        System.out.println("\nServices for Reservation " + res2 + ":");
-        manager.displayServices(res2);
+        } catch (InvalidBookingException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
 
-        // Calculate additional cost
-        System.out.println("\nTotal Add-On Cost for " + res1 + ": ₹" +
-                manager.calculateTotalCost(res1));
-
-        System.out.println("Total Add-On Cost for " + res2 + ": ₹" +
-                manager.calculateTotalCost(res2));
+        System.out.println("\nSystem running safely after errors.");
     }
 }
 
-/* ================= SERVICE CLASS ================= */
+/* ================= CUSTOM EXCEPTION ================= */
 
-class Service {
+class InvalidBookingException extends Exception {
 
-    private String name;
-    private double cost;
-
-    public Service(String name, double cost) {
-        this.name = name;
-        this.cost = cost;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public double getCost() {
-        return cost;
+    public InvalidBookingException(String message) {
+        super(message);
     }
 }
 
-/* ================= ADD-ON SERVICE MANAGER ================= */
+/* ================= INVENTORY ================= */
 
-class AddOnServiceManager {
+class RoomInventory {
 
-    // Map<ReservationID, List of Services>
-    private Map<String, List<Service>> serviceMap = new HashMap<>();
+    private Map<String, Integer> map = new HashMap<>();
 
-    // Add service to a reservation
-    public void addService(String reservationId, Service service) {
-
-        // If no list exists, create one
-        serviceMap.putIfAbsent(reservationId, new ArrayList<>());
-
-        serviceMap.get(reservationId).add(service);
-
-        System.out.println("Added " + service.getName() +
-                " to Reservation " + reservationId);
+    public void addRoom(String type, int count) {
+        map.put(type, count);
     }
 
-    // Display services for a reservation
-    public void displayServices(String reservationId) {
-
-        List<Service> services = serviceMap.get(reservationId);
-
-        if (services == null || services.isEmpty()) {
-            System.out.println("No services selected.");
-            return;
-        }
-
-        for (Service s : services) {
-            System.out.println("Service: " + s.getName() +
-                    " | Cost: ₹" + s.getCost());
-        }
+    public int getAvailability(String type) {
+        return map.getOrDefault(type, -1);
     }
 
-    // Calculate total cost of services
-    public double calculateTotalCost(String reservationId) {
+    public void updateRoom(String type, int change) throws InvalidBookingException {
 
-        List<Service> services = serviceMap.get(reservationId);
+        int current = getAvailability(type);
 
-        double total = 0;
-
-        if (services != null) {
-            for (Service s : services) {
-                total += s.getCost();
-            }
+        if (current == -1) {
+            throw new InvalidBookingException("Invalid room type: " + type);
         }
 
-        return total;
+        if (current + change < 0) {
+            throw new InvalidBookingException("No rooms available for: " + type);
+        }
+
+        map.put(type, current + change);
+    }
+}
+
+/* ================= BOOKING SERVICE ================= */
+
+class BookingService {
+
+    private RoomInventory inventory;
+
+    public BookingService(RoomInventory inventory) {
+        this.inventory = inventory;
+    }
+
+    public void bookRoom(String id, String guest, String roomType)
+            throws InvalidBookingException {
+
+        // Validation (Fail-Fast)
+        if (roomType == null || roomType.isEmpty()) {
+            throw new InvalidBookingException("Room type cannot be empty");
+        }
+
+        // Try updating inventory
+        inventory.updateRoom(roomType, -1);
+
+        // If successful
+        System.out.println("Booking Confirmed: " + id +
+                " | Guest: " + guest +
+                " | Room: " + roomType);
     }
 }
