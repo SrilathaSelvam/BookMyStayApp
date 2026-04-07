@@ -1,81 +1,34 @@
 import java.util.*;
 
 /**
- * Use Case 5: Booking Request Queue (FIFO)
- * Version 5.0
+ * Use Case 6: Bogie Capacity Mapping
+ * Version 6.0
  *
- * Demonstrates fair handling of booking requests using Queue (FIFO).
+ * Demonstrates mapping between bogie type and its capacity
+ * using HashMap (key–value structure).
  */
-public class UseCase5BookingQueue {
+public class BookMyStayApp {
 
     public static void main(String[] args) {
 
-        System.out.println("===== Book My Stay - v5.0 =====");
+        System.out.println("===== Train Bogie Capacity Mapping =====");
 
-        // Initialize Booking Queue
-        BookingQueue queue = new BookingQueue();
+        // Step 1: Create HashMap
+        HashMap<String, Integer> bogieMap = new HashMap<>();
 
-        // Guest submits booking requests
-        queue.addRequest(new Reservation("R001", "Alice", "Single Room"));
-        queue.addRequest(new Reservation("R002", "Bob", "Double Room"));
-        queue.addRequest(new Reservation("R003", "Charlie", "Suite Room"));
+        // Step 2: Insert key–value pairs using put()
+        bogieMap.put("Sleeper", 72);
+        bogieMap.put("AC Chair", 60);
+        bogieMap.put("First Class", 40);
 
-        // Display queued requests
-        System.out.println("\nBooking Requests in Queue:");
-        queue.displayQueue();
-    }
-}
+        // Step 3: Iterate using entrySet()
+        System.out.println("\nBogie Capacity Details:\n");
 
-/* ================= RESERVATION ================= */
-
-class Reservation {
-
-    private String requestId;
-    private String guestName;
-    private String roomType;
-
-    public Reservation(String requestId, String guestName, String roomType) {
-        this.requestId = requestId;
-        this.guestName = guestName;
-        this.roomType = roomType;
-    }
-
-    public String getRequestId() {
-        return requestId;
-    }
-
-    public String getGuestName() {
-        return guestName;
-    }
-
-    public String getRoomType() {
-        return roomType;
-    }
-
-    public void display() {
-        System.out.println("Request ID: " + requestId +
-                ", Guest: " + guestName +
-                ", Room: " + roomType);
-    }
-}
-
-/* ================= BOOKING QUEUE ================= */
-
-class BookingQueue {
-
-    // FIFO Queue
-    private Queue<Reservation> queue = new LinkedList<>();
-
-    // Add request to queue
-    public void addRequest(Reservation r) {
-        queue.add(r);
-        System.out.println("Request Added: " + r.getRequestId());
-    }
-
-    // Display all requests (without removing)
-    public void displayQueue() {
-        for (Reservation r : queue) {
-            r.display();
+        for (Map.Entry<String, Integer> entry : bogieMap.entrySet()) {
+            System.out.println("Bogie: " + entry.getKey() +
+                    " -> Capacity: " + entry.getValue());
         }
+
+        System.out.println("\nProgram continues...");
     }
 }
