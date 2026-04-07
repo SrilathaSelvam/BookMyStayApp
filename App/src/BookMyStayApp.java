@@ -1,54 +1,92 @@
 import java.util.*;
 
 /**
- * Use Case 9: Validation & Error Handling
- * Version 9.0
+ * Use Case 10: Booking Cancellation & State Reversal
+ * Version 10.0
  *
- * Demonstrates input validation, custom exceptions,
- * and fail-fast error handling.
+ * Demonstrates safe cancellation using Stack (LIFO)
+ * and proper rollback of inventory state.
  */
 public class BookMyStayApp{
 
     public static void main(String[] args) {
 
-        System.out.println("===== Book My Stay - v9.0 =====");
+        System.out.println("===== Book My Stay - v10.0 =====");
 
         RoomInventory inventory = new RoomInventory();
         inventory.addRoom("Single Room", 2);
-        inventory.addRoom("Double Room", 1);
 
-        BookingService service = new BookingService(inventory);
+        BookingHistory history = new BookingHistory();
+        CancellationService cancelService = new CancellationService(inventory, history);
 
-        try {
-            // Valid booking
-            service.bookRoom("R001", "Alice", "Single Room");
+        // Confirm bookings
+        history.addBooking(new Reservation("R001", "Alice", "Single Room"));
+        history.addBooking(new Reservation("R002", "Bob", "Single Room"));
 
-            // Invalid room type
-            service.bookRoom("R002", "Bob", "Suite Room");
+        // Reduce inventory manually (simulate allocation)
+        inventory.updateRoom("Single Room", -2);
 
-        } catch (InvalidBookingException e) {
-            System.out.println("Error: " + e.getMessage());
-        }
+        // Perform cancellation
+        cancelService.cancelBooking("R002");
 
-        try {
-            // Overbooking attempt
-            service.bookRoom("R003", "Charlie", "Double Room");
-            service.bookRoom("R004", "David", "Double Room"); // exceeds
+        // Try invalid cancellation
+        cancelService.cancelBooking("R999");
 
-        } catch (InvalidBookingException e) {
-            System.out.println("Error: " + e.getMessage());
-        }
-
-        System.out.println("\nSystem running safely after errors.");
+        System.out.println("\nFinal Inventory:");
+        inventory.display();
     }
 }
 
-/* ================= CUSTOM EXCEPTION ================= */
+/* ================= RESERVATION ================= */
 
-class InvalidBookingException extends Exception {
+class Reservation {
 
-    public InvalidBookingException(String message) {
-        super(message);
+    private String id;
+    private String guest;
+    private String roomType;
+    private boolean active = true;
+
+    public Reservation(String id, String guest, String roomType) {
+        this.id = id;
+        this.guest = guest;
+        this.roomType = roomType;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void cancel() {
+        active = false;
+    }
+}
+
+/* ================= BOOKING HISTORY ================= */
+
+class BookingHistory {
+
+    private List<Reservation> bookings = new ArrayList<>();
+
+    public void addBooking(Reservation r) {
+        bookings.add(r);
+        System.out.println("Booking Confirmed: " + r.getId());
+    }
+
+    public Reservation findBooking(String id) {
+        for (Reservation r : bookings) {
+            if (r.getId().equals(id)) {
+                return r;
+            }
+        }
+        return null;
     }
 }
 
@@ -62,50 +100,56 @@ class RoomInventory {
         map.put(type, count);
     }
 
-    public int getAvailability(String type) {
-        return map.getOrDefault(type, -1);
+    public void updateRoom(String type, int change) {
+        map.put(type, map.getOrDefault(type, 0) + change);
     }
 
-    public void updateRoom(String type, int change) throws InvalidBookingException {
-
-        int current = getAvailability(type);
-
-        if (current == -1) {
-            throw new InvalidBookingException("Invalid room type: " + type);
+    public void display() {
+        for (Map.Entry<String, Integer> e : map.entrySet()) {
+            System.out.println(e.getKey() + " -> " + e.getValue());
         }
-
-        if (current + change < 0) {
-            throw new InvalidBookingException("No rooms available for: " + type);
-        }
-
-        map.put(type, current + change);
     }
 }
 
-/* ================= BOOKING SERVICE ================= */
+/* ================= CANCELLATION SERVICE ================= */
 
-class BookingService {
+class CancellationService {
 
     private RoomInventory inventory;
+    private BookingHistory history;
 
-    public BookingService(RoomInventory inventory) {
+    // Stack for rollback (LIFO)
+    private Stack<String> rollbackStack = new Stack<>();
+
+    public CancellationService(RoomInventory inventory, BookingHistory history) {
         this.inventory = inventory;
+        this.history = history;
     }
 
-    public void bookRoom(String id, String guest, String roomType)
-            throws InvalidBookingException {
+    public void cancelBooking(String bookingId) {
 
-        // Validation (Fail-Fast)
-        if (roomType == null || roomType.isEmpty()) {
-            throw new InvalidBookingException("Room type cannot be empty");
+        Reservation r = history.findBooking(bookingId);
+
+        // Validation
+        if (r == null) {
+            System.out.println("Error: Booking not found.");
+            return;
         }
 
-        // Try updating inventory
-        inventory.updateRoom(roomType, -1);
+        if (!r.isActive()) {
+            System.out.println("Error: Booking already cancelled.");
+            return;
+        }
 
-        // If successful
-        System.out.println("Booking Confirmed: " + id +
-                " | Guest: " + guest +
-                " | Room: " + roomType);
+        // Push to rollback stack
+        rollbackStack.push(bookingId);
+
+        // Restore inventory
+        inventory.updateRoom(r.getRoomType(), 1);
+
+        // Mark as cancelled
+        r.cancel();
+
+        System.out.println("Booking Cancelled: " + bookingId);
     }
 }
