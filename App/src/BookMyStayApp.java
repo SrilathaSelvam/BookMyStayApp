@@ -3,6 +3,8 @@ import java.util.*;
 /**
  * Use Case 4: Room Search & Availability Check
  * Version 4.0
+ * 
+ * Resolved Merge Conflict (UC4 kept, UC3 removed)
  */
 public class BookMyStayApp {
 
@@ -10,36 +12,34 @@ public class BookMyStayApp {
 
         System.out.println("===== Book My Stay - v4.0 =====");
 
-        // Step 1: Initialize Inventory (Centralized State)
+        // Initialize Inventory
         RoomInventory inventory = new RoomInventory();
         inventory.addRoom("Single Room", 10);
         inventory.addRoom("Double Room", 0); // unavailable
         inventory.addRoom("Suite Room", 3);
 
-        // Step 2: Create Room Objects (Domain Model)
+        // Create Room Objects
         List<Room> rooms = new ArrayList<>();
         rooms.add(new SingleRoom(1, 200, 2500));
         rooms.add(new DoubleRoom(2, 300, 4000));
         rooms.add(new SuiteRoom(3, 500, 7000));
 
-        // Step 3: Perform Search (Read-Only)
+        // Perform Search (READ-ONLY)
         RoomSearchService search = new RoomSearchService();
         search.showAvailableRooms(rooms, inventory);
     }
 }
 
-/* ================= INVENTORY CLASS ================= */
+/* ================= INVENTORY ================= */
 
 class RoomInventory {
 
     private HashMap<String, Integer> map = new HashMap<>();
 
-    // Add room type and availability
     public void addRoom(String type, int count) {
         map.put(type, count);
     }
 
-    // Get availability (Read-only)
     public int getAvailability(String type) {
         return map.getOrDefault(type, 0);
     }
@@ -49,7 +49,6 @@ class RoomInventory {
 
 class RoomSearchService {
 
-    // Read-only method (NO modification)
     public void showAvailableRooms(List<Room> rooms, RoomInventory inventory) {
 
         System.out.println("\nAvailable Rooms:\n");
@@ -58,7 +57,7 @@ class RoomSearchService {
 
             int available = inventory.getAvailability(r.getType());
 
-            // Filter unavailable rooms
+            // Show only available rooms
             if (available > 0) {
                 r.display();
                 System.out.println("Available: " + available);
@@ -80,18 +79,6 @@ abstract class Room {
         this.beds = beds;
         this.size = size;
         this.price = price;
-    }
-
-    public int getBeds() {
-        return beds;
-    }
-
-    public int getSize() {
-        return size;
-    }
-
-    public double getPrice() {
-        return price;
     }
 
     public abstract String getType();
